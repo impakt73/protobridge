@@ -44,23 +44,25 @@ void UpdateProtoBridge(ProtoBridge hProtoBridge)
     // Handle memory reads
     if (pContext->top.o_read_en && (pContext->pMemory != nullptr))
     {
-        const uint64_t readAddr = pContext->top.o_read_addr;
-        if ((readAddr + sizeof(uint64_t)) <= pContext->memorySize)
+        const uint32_t readAddr = pContext->top.o_read_addr;
+        if ((readAddr + sizeof(uint32_t)) <= pContext->memorySize)
         {
-            uint64_t data;
-            memcpy(&data, reinterpret_cast<uint8_t*>(pContext->pMemory) + readAddr, sizeof(uint64_t));
+            uint32_t data;
+            memcpy(&data, reinterpret_cast<uint8_t*>(pContext->pMemory) + readAddr, sizeof(uint32_t));
             pContext->top.i_data = data;
+            printf("Read %u From %u\n", static_cast<uint32_t>(data), static_cast<uint32_t>(readAddr));
         }
     }
 
     // Handle memory writes
     if (pContext->top.o_write_en && (pContext->pMemory != nullptr))
     {
-        const uint64_t writeAddr = pContext->top.o_write_addr;
-        if ((writeAddr + sizeof(uint64_t)) <= pContext->memorySize)
+        const uint32_t writeAddr = pContext->top.o_write_addr;
+        if ((writeAddr + sizeof(uint32_t)) <= pContext->memorySize)
         {
-            const uint64_t data = pContext->top.o_data;
-            memcpy(reinterpret_cast<uint8_t*>(pContext->pMemory) + writeAddr, &data, sizeof(uint64_t));
+            const uint32_t data = pContext->top.o_data;
+            memcpy(reinterpret_cast<uint8_t*>(pContext->pMemory) + writeAddr, &data, sizeof(uint32_t));
+            printf("Write %u To %u\n", static_cast<uint32_t>(data), static_cast<uint32_t>(writeAddr));
         }
     }
 
