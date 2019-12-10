@@ -19,13 +19,18 @@ uint32_t CreateProtoBridge(ProtoBridge* phProtoBridge, void* pMemory, size_t mem
     pContext->pMemory = pMemory;
     pContext->memorySize = memorySize;
 
+    pContext->top.i_clk = 0;
+
+    pContext->top.eval();
+
     pContext->top.i_logic_en = 1;
     pContext->top.i_reg_ctl = 0;
-    pContext->top.i_clk = 0;
+    pContext->top.i_clk = 1;
     pContext->top.i_rst = 1;
 
     pContext->top.eval();
 
+    pContext->top.i_clk = 0;
     pContext->top.i_rst = 0;
 
     pContext->top.eval();
