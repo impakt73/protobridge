@@ -19,6 +19,8 @@ uint32_t CreateProtoBridge(ProtoBridge* phProtoBridge, void* pMemory, size_t mem
     pContext->pMemory = pMemory;
     pContext->memorySize = memorySize;
 
+    pContext->top.i_logic_en = 1;
+    pContext->top.i_reg_ctl = 0;
     pContext->top.i_clk = 0;
     pContext->top.i_rst = 1;
 
@@ -27,6 +29,8 @@ uint32_t CreateProtoBridge(ProtoBridge* phProtoBridge, void* pMemory, size_t mem
     pContext->top.i_rst = 0;
 
     pContext->top.eval();
+
+    pContext->top.i_logic_en = 0;
 
     return result;
 }
@@ -66,6 +70,8 @@ void UpdateProtoBridge(ProtoBridge hProtoBridge)
         }
     }
 
+    pContext->top.i_logic_en = 1;
+
     pContext->top.i_clk = 1;
 
     pContext->top.eval();
@@ -73,4 +79,44 @@ void UpdateProtoBridge(ProtoBridge hProtoBridge)
     pContext->top.i_clk = 0;
 
     pContext->top.eval();
+
+    pContext->top.i_logic_en = 0;
+}
+
+void WriteProtoBridgeRegister(ProtoBridge hProtoBridge, uint32_t offset, uint32_t data)
+{
+    ProtoBridgeContext* pContext = reinterpret_cast<ProtoBridgeContext*>(hProtoBridge);
+
+    pContext->top.i_reg_ctl = 2;
+    pContext->top.i_reg_addr = offset;
+    pContext->top.i_reg_data = data;
+
+    pContext->top.i_clk = 1;
+
+    pContext->top.eval();
+
+    pContext->top.i_clk = 0;
+
+    pContext->top.eval();
+
+    pContext->top.i_reg_ctl = 0;
+}
+
+uint32_t ReadProtoBridgeRegister(ProtoBridge hProtoBridge, uint32_t offset)
+{
+    ProtoBridgeContext* pContext = reinterpret_cast<ProtoBridgeContext*>(hProtoBridge);
+
+    pContext->top.i_reg_ctl = 1;
+    pContext->top.i_reg_addr = offset;
+
+    pContext->top.i_clk = 1;
+
+    pContext->top.eval();
+
+    pContext->top.i_clk = 0;
+
+    pContext->top.eval();
+
+    pContext->top.i_reg_ctl = 0;
+    return pContext->top.o_reg_data;
 }
