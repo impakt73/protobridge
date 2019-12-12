@@ -1,30 +1,41 @@
 #include <protobridge.h>
+#include <cassert>
 
 #include <Vtop.h>
 
 struct ProtoBridgeContext
 {
     Vtop top;
-    void* pMemory;
-    size_t memorySize;
 };
 
-uint32_t CreateProtoBridge(ProtoBridge* phProtoBridge, void* pMemory, size_t memorySize)
+void ExecuteClock(ProtoBridgeContext* pContext, bool enableLogic)
+{
+    pContext->top.i_logic_en = enableLogic;
+
+    pContext->top.i_clk = 1;
+
+    pContext->top.eval();
+
+    pContext->top.i_clk = 0;
+
+    pContext->top.eval();
+
+    pContext->top.i_logic_en = 0;
+}
+
+uint32_t CreateProtoBridge(ProtoBridge* phProtoBridge)
 {
     uint32_t result = 0xFFFFFFFF;
 
     ProtoBridgeContext* pContext = new ProtoBridgeContext();
     (*phProtoBridge) = reinterpret_cast<ProtoBridge>(pContext);
 
-    pContext->pMemory = pMemory;
-    pContext->memorySize = memorySize;
-
     pContext->top.i_clk = 0;
 
     pContext->top.eval();
 
     pContext->top.i_logic_en = 1;
-    pContext->top.i_reg_ctl = 0;
+    pContext->top.i_mem_op = 0;
     pContext->top.i_clk = 1;
     pContext->top.i_rst = 1;
 
@@ -46,82 +57,58 @@ void DestroyProtoBridge(ProtoBridge hProtoBridge)
     delete pContext;
 }
 
-void UpdateProtoBridge(ProtoBridge hProtoBridge)
+void ClockProtoBridge(ProtoBridge hProtoBridge)
 {
     ProtoBridgeContext* pContext = reinterpret_cast<ProtoBridgeContext*>(hProtoBridge);
 
-    // Handle memory reads
-    if (pContext->top.o_read_en && (pContext->pMemory != nullptr))
-    {
-        const uint32_t readAddr = pContext->top.o_read_addr;
-        if ((readAddr + sizeof(uint32_t)) <= pContext->memorySize)
-        {
-            uint32_t data;
-            memcpy(&data, reinterpret_cast<uint8_t*>(pContext->pMemory) + readAddr, sizeof(uint32_t));
-            pContext->top.i_data = data;
-            printf("Read %u From %u\n", static_cast<uint32_t>(data), static_cast<uint32_t>(readAddr));
-        }
-    }
-
-    // Handle memory writes
-    if (pContext->top.o_write_en && (pContext->pMemory != nullptr))
-    {
-        const uint32_t writeAddr = pContext->top.o_write_addr;
-        if ((writeAddr + sizeof(uint32_t)) <= pContext->memorySize)
-        {
-            const uint32_t data = pContext->top.o_data;
-            memcpy(reinterpret_cast<uint8_t*>(pContext->pMemory) + writeAddr, &data, sizeof(uint32_t));
-            printf("Write %u To %u\n", static_cast<uint32_t>(data), static_cast<uint32_t>(writeAddr));
-        }
-    }
-
-    pContext->top.i_logic_en = 1;
-
-    pContext->top.i_clk = 1;
-
-    pContext->top.eval();
-
-    pContext->top.i_clk = 0;
-
-    pContext->top.eval();
-
-    pContext->top.i_logic_en = 0;
+    ExecuteClock(pContext, true);
 }
 
-void WriteProtoBridgeRegister(ProtoBridge hProtoBridge, uint32_t offset, uint32_t data)
+void WriteProtoBridgeMemory(ProtoBridge hProtoBridge, const void* pSource, size_t size, size_t destination)
 {
     ProtoBridgeContext* pContext = reinterpret_cast<ProtoBridgeContext*>(hProtoBridge);
 
-    pContext->top.i_reg_ctl = 2;
-    pContext->top.i_reg_addr = offset;
-    pContext->top.i_reg_data = data;
+    // Write operation
+    pContext->top.i_mem_op = 2;
 
-    pContext->top.i_clk = 1;
+    const size_t numQwords = (size / sizeof(uint64_t));
+    assert(size % sizeof(uint64_t) == 0); // @TODO: Handle non-qword memory operations
 
-    pContext->top.eval();
+    for (size_t qwordIndex = 0; qwordIndex < numQwords; ++qwordIndex)
+    {
+        pContext->top.i_mem_addr = destination + qwordIndex;
+        pContext->top.i_mem_data = *(reinterpret_cast<const uint64_t*>(pSource) + qwordIndex);
 
-    pContext->top.i_clk = 0;
+        do
+        {
+            ExecuteClock(pContext, false);
+        } while (pContext->top.o_mem_op_pending);
+    }
 
-    pContext->top.eval();
-
-    pContext->top.i_reg_ctl = 0;
+    pContext->top.i_mem_op = 0;
 }
 
-uint32_t ReadProtoBridgeRegister(ProtoBridge hProtoBridge, uint32_t offset)
+void ReadProtoBridgeMemory(ProtoBridge hProtoBridge, size_t source, size_t size, void* pDestination)
 {
     ProtoBridgeContext* pContext = reinterpret_cast<ProtoBridgeContext*>(hProtoBridge);
 
-    pContext->top.i_reg_ctl = 1;
-    pContext->top.i_reg_addr = offset;
+    // Read operation
+    pContext->top.i_mem_op = 1;
 
-    pContext->top.i_clk = 1;
+    const size_t numQwords = (size / sizeof(uint64_t));
+    assert(size % sizeof(uint64_t) == 0); // @TODO: Handle non-qword memory operations
 
-    pContext->top.eval();
+    for (size_t qwordIndex = 0; qwordIndex < numQwords; ++qwordIndex)
+    {
+        pContext->top.i_mem_addr = source + qwordIndex;
 
-    pContext->top.i_clk = 0;
+        do
+        {
+            ExecuteClock(pContext, false);
+        } while (pContext->top.o_mem_op_pending);
 
-    pContext->top.eval();
+        *(reinterpret_cast<uint64_t*>(pDestination) + qwordIndex) = pContext->top.o_mem_data;
+    }
 
-    pContext->top.i_reg_ctl = 0;
-    return pContext->top.o_reg_data;
+    pContext->top.i_mem_op = 0;
 }

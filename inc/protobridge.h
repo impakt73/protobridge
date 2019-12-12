@@ -9,12 +9,12 @@ typedef struct ProtoBridge_t* ProtoBridge;
 extern "C"
 {
 
-uint32_t CreateProtoBridge(ProtoBridge* phProtoBridge, void* pMemory, size_t memorySize);
+uint32_t CreateProtoBridge(ProtoBridge* phProtoBridge);
 void DestroyProtoBridge(ProtoBridge hProtoBridge);
 
-void UpdateProtoBridge(ProtoBridge hProtoBridge);
-void WriteProtoBridgeRegister(ProtoBridge hProtoBridge, uint32_t offset, uint32_t data);
-uint32_t ReadProtoBridgeRegister(ProtoBridge hProtoBridge, uint32_t offset);
+void ClockProtoBridge(ProtoBridge hProtoBridge);
+void WriteProtoBridgeMemory(ProtoBridge hProtoBridge, const void* pSource, size_t size, size_t destination);
+void ReadProtoBridgeMemory(ProtoBridge hProtoBridge, size_t source, size_t size, void* pDestination);
 
 }
 
