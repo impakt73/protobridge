@@ -19,7 +19,11 @@ if(NOT DEFINED PROTOBRIDGE_HW_PATH)
     message(FATAL_ERROR "PROTOBRIDGE_HW_PATH must be defined by the parent project!")
 endif()
 
-verilate(protobridge $<DEFINED PROTOBRIDGE_TRACE:TRACE>
+if (DEFINED PROTOBRIDGE_TRACE)
+    set(PROTOBRIDGE_TRACE_ARG "TRACE")
+endif()
+
+verilate(protobridge ${PROTOBRIDGE_TRACE_ARG}
     INCLUDE_DIRS "${PROTOBRIDGE_HW_PATH}"
     SOURCES      "${PROTOBRIDGE_HW_PATH}/top.v"
 )

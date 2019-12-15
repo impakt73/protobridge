@@ -3,9 +3,18 @@
 
 #include <Vtop.h>
 
+#if VM_TRACE
+    #include <verilated_vcd_c.h>
+#endif
+
 struct ProtoBridgeContext
 {
     Vtop top;
+
+#if VM_TRACE
+    VerilatedVcdC trace;
+    uint64_t      time;
+#endif
 };
 
 void ExecuteClock(ProtoBridgeContext* pContext, bool enableLogic)
@@ -16,9 +25,17 @@ void ExecuteClock(ProtoBridgeContext* pContext, bool enableLogic)
 
     pContext->top.eval();
 
+#if VM_TRACE
+    pContext->trace.dump(pContext->time++);
+#endif
+
     pContext->top.i_clk = 0;
 
     pContext->top.eval();
+
+#if VM_TRACE
+    pContext->trace.dump(pContext->time++);
+#endif
 
     pContext->top.i_logic_en = 0;
 }
@@ -30,23 +47,20 @@ uint32_t CreateProtoBridge(ProtoBridge* phProtoBridge)
     ProtoBridgeContext* pContext = new ProtoBridgeContext();
     (*phProtoBridge) = reinterpret_cast<ProtoBridge>(pContext);
 
-    pContext->top.i_clk = 0;
+#if VM_TRACE
+    Verilated::traceEverOn(true);
 
-    pContext->top.eval();
+    pContext->time = 0;
+    pContext->top.trace(&pContext->trace, 99);
 
-    pContext->top.i_logic_en = 1;
-    pContext->top.i_mem_op = 0;
-    pContext->top.i_clk = 1;
+    pContext->trace.open("trace.vcd");
+#endif
+
     pContext->top.i_rst = 1;
 
-    pContext->top.eval();
+    ExecuteClock(pContext, true);
 
-    pContext->top.i_clk = 0;
     pContext->top.i_rst = 0;
-
-    pContext->top.eval();
-
-    pContext->top.i_logic_en = 0;
 
     return result;
 }
@@ -54,6 +68,11 @@ uint32_t CreateProtoBridge(ProtoBridge* phProtoBridge)
 void DestroyProtoBridge(ProtoBridge hProtoBridge)
 {
     ProtoBridgeContext* pContext = reinterpret_cast<ProtoBridgeContext*>(hProtoBridge);
+
+#if VM_TRACE
+    pContext->trace.close();
+#endif
+
     delete pContext;
 }
 
