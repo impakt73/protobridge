@@ -17,10 +17,8 @@ struct ProtoBridgeContext
 #endif
 };
 
-void ExecuteClock(ProtoBridgeContext* pContext, bool enableLogic)
+void ExecuteClock(ProtoBridgeContext* pContext)
 {
-    pContext->top.i_logic_en = enableLogic;
-
     pContext->top.i_clk = 1;
 
     pContext->top.eval();
@@ -36,8 +34,6 @@ void ExecuteClock(ProtoBridgeContext* pContext, bool enableLogic)
 #if VM_TRACE
     pContext->trace.dump(pContext->time++);
 #endif
-
-    pContext->top.i_logic_en = 0;
 }
 
 uint32_t CreateProtoBridge(ProtoBridge* phProtoBridge)
@@ -58,7 +54,7 @@ uint32_t CreateProtoBridge(ProtoBridge* phProtoBridge)
 
     pContext->top.i_rst = 1;
 
-    ExecuteClock(pContext, true);
+    ExecuteClock(pContext);
 
     pContext->top.i_rst = 0;
 
@@ -80,7 +76,7 @@ void ClockProtoBridge(ProtoBridge hProtoBridge)
 {
     ProtoBridgeContext* pContext = reinterpret_cast<ProtoBridgeContext*>(hProtoBridge);
 
-    ExecuteClock(pContext, true);
+    ExecuteClock(pContext);
 }
 
 void WriteProtoBridgeMemory(ProtoBridge hProtoBridge, const void* pSource, size_t size, size_t destination)
@@ -100,7 +96,7 @@ void WriteProtoBridgeMemory(ProtoBridge hProtoBridge, const void* pSource, size_
 
         do
         {
-            ExecuteClock(pContext, false);
+            ExecuteClock(pContext);
         } while (pContext->top.o_mem_op_pending);
     }
 
@@ -123,11 +119,18 @@ void ReadProtoBridgeMemory(ProtoBridge hProtoBridge, size_t source, size_t size,
 
         do
         {
-            ExecuteClock(pContext, false);
+            ExecuteClock(pContext);
         } while (pContext->top.o_mem_op_pending);
 
         *(reinterpret_cast<uint64_t*>(pDestination) + qwordIndex) = pContext->top.o_mem_data;
     }
 
     pContext->top.i_mem_op = 0;
+}
+
+uint64_t QueryProtoBridgeCycleCount(ProtoBridge hProtoBridge)
+{
+    ProtoBridgeContext* pContext = reinterpret_cast<ProtoBridgeContext*>(hProtoBridge);
+
+    return (pContext->time / 2);
 }
