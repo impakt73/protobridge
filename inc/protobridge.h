@@ -6,16 +6,20 @@
 
 typedef struct ProtoBridge_t* ProtoBridge;
 
+struct DataStatus
+{
+    uint8_t isInputFull;
+    uint8_t isOutputEmpty;
+};
+
 extern "C"
 {
 
 uint32_t CreateProtoBridge(ProtoBridge* phProtoBridge);
 void DestroyProtoBridge(ProtoBridge hProtoBridge);
 
-void ClockProtoBridge(ProtoBridge hProtoBridge);
-void WriteProtoBridgeMemory(ProtoBridge hProtoBridge, const void* pSource, size_t size, size_t destination);
-void ReadProtoBridgeMemory(ProtoBridge hProtoBridge, size_t source, size_t size, void* pDestination);
-uint64_t QueryProtoBridgeCycleCount(ProtoBridge hProtoBridge);
+DataStatus QueryProtoBridgeDataStatus(ProtoBridge hProtoBridge);
+void ClockProtoBridge(ProtoBridge hProtoBridge, const uint8_t* pInputData, uint8_t* pOutputData);
 
 }
 

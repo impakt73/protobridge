@@ -13,6 +13,8 @@ target_sources(protobridge
         src/protobridge.cpp
 )
 
+install(TARGETS protobridge)
+
 find_package(verilator REQUIRED)
 
 if(NOT DEFINED PROTOBRIDGE_HW_PATH)
@@ -25,5 +27,5 @@ endif()
 
 verilate(protobridge ${PROTOBRIDGE_TRACE_ARG}
     INCLUDE_DIRS "${PROTOBRIDGE_HW_PATH}"
-    SOURCES      "${PROTOBRIDGE_HW_PATH}/top.v"
+    SOURCES      "${PROTOBRIDGE_HW_PATH}/top.sv"
 )
