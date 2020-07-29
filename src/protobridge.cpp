@@ -13,7 +13,7 @@ struct ProtoBridgeContext
 
 #if VM_TRACE
     VerilatedVcdC trace;
-    uint64_t      time;
+    vluint64_t    time;
 #endif
 };
 
